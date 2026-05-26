@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dividenden">
+<meta name="theme-color" content="#ffffff">
+<title>Dividend Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/tabler-icons.min.css">
+<style>
+:root{--bg:#ffffff;--bg2:#f5f5f4;--text:#1c1917;--text2:#78716c;--text3:#a8a29e;--border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);--green:#16a34a;--radius:8px}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1917;--bg2:#292524;--text:#fafaf9;--text2:#a8a29e;--text3:#78716c;--border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22)}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);max-width:480px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.tab-bar{position:sticky;top:0;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;z-index:10;padding-top:env(safe-area-inset-top)}
+.tab{flex:1;padding:10px 0 8px;font-size:12px;text-align:center;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;line-height:1.4}
+.tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.tab i{display:block;font-size:18px;margin-bottom:2px}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+.metric{background:var(--bg2);border-radius:var(--radius);padding:14px}
+.metric-label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:500}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.section-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin:20px 0 10px}
+.row{display:flex;align-items:center;padding:11px 0;border-bottom:0.5px solid var(--border);gap:10px;cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.row-name{flex:1}
+.row-ticker{font-size:14px;font-weight:500}
+.row-detail{font-size:11px;color:var(--text2);margin-top:1px}
+.row-amt{font-size:14px;font-weight:500;color:var(--green)}
+.tag{font-size:10px;padding:2px 6px;border-radius:10px;margin-left:5px;display:inline-block;vertical-align:middle}
+.tag-live{background:#dcfce7;color:#166534}
+.tag-est{background:#fef3c7;color:#92400e}
+.tag-zins{background:#dbeafe;color:#1e40af}
+.chart-wrap{position:relative;width:100%;height:220px;margin:8px 0 16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.status-bar{display:flex;align-items:center;gap:8px;font-size:12px;padding:10px 12px;border-radius:var(--radius);margin-bottom:16px;border:0.5px solid transparent}
+.status-ok{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+.status-loading{background:var(--bg2);color:var(--text2)}
+.status-warn{background:#fffbeb;color:#92400e;border-color:#fde68a}
+.status-err{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+.status-text{flex:1}
+.refresh-btn{background:none;border:0.5px solid currentColor;border-radius:var(--radius);color:inherit;cursor:pointer;font-size:12px;padding:4px 8px;white-space:nowrap}
+.warn-box{border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;border:0.5px solid #fca5a5;background:#fef2f2}
+.warn-box-title{font-size:13px;font-weight:500;color:#991b1b;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.warn-box-body{font-size:12px;color:#991b1b;line-height:1.5}
+.prog-month{padding:12px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.prog-lbl{width:38px;flex-shrink:0}
+.prog-mon{font-size:13px;font-weight:500}
+.prog-yr{font-size:11px;color:var(--text3)}
+.prog-detail{flex:1}
+.prog-total{width:80px;text-align:right;flex-shrink:0;font-size:14px;font-weight:500}
+.divline{font-size:13px;display:flex;justify-content:space-between;padding:1px 0}
+.form-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+input,select{width:100%;padding:9px 10px;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text)}
+.btn{width:100%;padding:12px;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.btn-primary{background:var(--text);color:var(--bg);border:none}
+.btn-outline{background:none;color:var(--text);border:0.5px solid var(--border2);margin-top:8px}
+.btn-icon{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px}
+.history-item{padding:10px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px}
+.history-date{font-size:12px;color:var(--text2);width:68px;flex-shrink:0}
+.history-amt{font-size:14px;font-weight:500;color:var(--green)}
+.shares-row{display:flex;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);gap:8px}
+.shares-ticker{font-size:13px;font-weight:500;width:50px;flex-shrink:0}
+.shares-freq{flex:1;font-size:11px;color:var(--text3)}
+.shares-input{width:90px!important;flex-shrink:0}
+.save-msg{font-size:12px;color:var(--green);margin-top:8px;display:none}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.zins-box{background:var(--bg2);border-radius:var(--radius);padding:14px;margin-bottom:16px}
+.zins-box-title{font-size:13px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.zins-field{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.zins-field-label{font-size:13px;color:var(--text2);flex:1}
+.zins-field input{width:120px!important;flex-shrink:0}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal-sheet{background:var(--bg);border-radius:16px 16px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:0 0 40px}
+.modal-header{position:sticky;top:0;background:var(--bg);padding:16px 16px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;z-index:2}
+.modal-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.modal-title{flex:1;font-size:15px;font-weight:500}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);padding:2px 8px}
+.modal-body{padding:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.kpi-card{background:var(--bg2);border-radius:var(--radius);padding:12px}
+.kpi-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.kpi-value{font-size:16px;font-weight:500}
+.kpi-value.big{font-size:19px}
+.dsec{margin-bottom:20px}
+.dsec-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+.dtable{width:100%;border-collapse:collapse;font-size:13px}
+.dtable th{text-align:left;color:var(--text2);font-weight:400;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px}
+.dtable td{padding:6px 0;border-bottom:0.5px solid var(--border);vertical-align:top}
+.dtable td:last-child,.dtable th:last-child{text-align:right}
+.pos{color:#166534}.neg{color:#991b1b}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.bar-label{font-size:12px;width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.bar-pct{font-size:11px;color:var(--text2);width:38px;text-align:right;flex-shrink:0}
+.toggle-btn{width:100%;padding:8px;background:none;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:13px;color:var(--text2);cursor:pointer;margin-top:6px}
+.dd-link{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#1d4ed8;text-decoration:none;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)}
+.chevron{font-size:14px;color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('dashboard',this)"><i class="ti ti-chart-bar"></i>Dashboard</button>
+  <button class="tab" onclick="switchTab('prognose',this)"><i class="ti ti-calendar"></i>Prognose</button>
+  <button class="tab" onclick="switchTab('historik',this)"><i class="ti ti-clock"></i>Historik</button>
+  <button class="tab" onclick="switchTab('einstellungen',this)"><i class="ti ti-settings"></i>Anteile</button>
+</div>
+<div id="tab-dashboard" class="page active"></div>
+<div id="tab-prognose" class="page"></div>
+<div id="tab-historik" class="page"></div>
+<div id="tab-einstellungen" class="page"></div>
+<div id="modal-wrap"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const ETFS=[
+  {ticker:'VGWD',isin:'IE00B8GKDB10',freq:'quarterly',color:'#2563EB'},
+  {ticker:'LDGL',isin:'IE0005AJA0P1',freq:'monthly',  color:'#0891B2'},
+  {ticker:'ISPA',isin:'DE000A0F5UH1',freq:'quarterly',color:'#DB2777'},
+  {ticker:'ZPRG',isin:'IE00B9CQXS71',freq:'quarterly',color:'#D97706'},
+  {ticker:'VDIV',isin:'NL0011683594',freq:'quarterly', color:'#7C3AED'},
+  {ticker:'EUNY',isin:'IE00B652H904',freq:'quarterly',color:'#DC2626'},
+  {ticker:'WINC',isin:'IE000KJPDY61',freq:'monthly',  color:'#4F46E5'}
+];
+const ZINS_COLOR='#0E7490';
+const FB={VGWD:0.28,LDGL:0.05,ISPA:0.38,ZPRG:0.22,VDIV:0.45,EUNY:0.18,WINC:0.06};
+const MON=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MONF=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+function loadState(){
+  try{const s=localStorage.getItem('dtrk_pwa2');if(s)return JSON.parse(s);}catch(e){}
+  return{shares:{VGWD:460,LDGL:2042,ISPA:405,ZPRG:475,VDIV:222,EUNY:795,WINC:2922},zins:{kapital:219521,satz:2.5},history:[],api:{},fetched:null,failed:[],anyFail:false};
+}
+function save(){try{localStorage.setItem('dtrk_pwa2',JSON.stringify(S));}catch(e){}}
+let S=loadState();
+
+const fmt=n=>Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtI=n=>Math.round(n).toLocaleString('de-DE');
+const fmtP=n=>(n>=0?'+':'')+Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+function zm(){return Math.round(S.zins.kapital*S.zins.satz/100/12*100)/100;}
+function zj(){return Math.round(zm()*12*100)/100;}
+
+async function loadApi(force=false){
+  const age=S.fetched?(Date.now()-S.fetched)/3600000:999;
+  if(!force&&age<6&&Object.keys(S.api).length===ETFS.length&&!S.anyFail){renderAll();return;}
+  setStatus('loading','Verbinde mit DivvyDiary...');
+  const failed=[];
+  for(const e of ETFS){
+    try{
+      const r=await fetch('/api/divvy?isin='+e.isin);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      S.api[e.ticker]=await r.json();
+    }catch(x){failed.push(e.ticker);}
+  }
+  S.fetched=Date.now();S.failed=failed;S.anyFail=failed.length>0;save();
+  if(!failed.length)setStatus('ok','Aktualisiert – '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr');
+  else if(failed.length<ETFS.length)setStatus('warn',(ETFS.length-failed.length)+'/'+ETFS.length+' geladen – '+failed.join(', ')+' Schätzwert');
+  else setStatus('err','DivvyDiary nicht erreichbar – Schätzwerte aktiv');
+  renderAll();
+}
+
+async function refresh(){S.api={};S.fetched=null;S.failed=[];S.anyFail=false;save();await loadApi(true);}
+
+function setStatus(t,msg){
+  const el=document.getElementById('ast');if(!el)return;
+  const ic={ok:'ti-check',loading:'ti-refresh',warn:'ti-alert-triangle',err:'ti-alert-circle'}[t];
+  const cl={ok:'status-ok',loading:'status-loading',warn:'status-warn',err:'status-err'}[t];
+  el.className='status-bar '+cl;
+  el.innerHTML=`<i class="ti ${ic}"></i><span class="status-text">${msg}</span><button class="refresh-btn" onclick="refresh()"><i class="ti ti-refresh"></i> Neu laden</button>`;
+}
+
+function lastDiv(t){
+  const d=S.api[t];
+  if(d&&d.dividends&&d.dividends.length){
+    const s=[...d.dividends].sort((a,b)=>new Date(b.paymentDate||b.exDate)-new Date(a.paymentDate||a.exDate));
+    return{amt:parseFloat(s[0].amount)||0,date:s[0].paymentDate||s[0].exDate||null,live:true};
+  }
+  return{amt:FB[t]||0,date:null,live:false};
+}
+
+function payMonths(t){
+  const d=S.api[t];
+  if(d&&d.dividends&&d.dividends.length){
+    const ms=new Set();
+    d.dividends.forEach(x=>{const dt=new Date(x.paymentDate||x.exDate);if(!isNaN(dt))ms.add(dt.getMonth());});
+    if(ms.size>=2)return Array.from(ms).sort((a,b)=>a-b);
+  }
+  return ETFS.find(e=>e.ticker===t).freq==='monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:[2,5,8,11];
+}
+
+function nextDate(t){
+  const d=S.api[t];
+  if(d&&d.nextDividend){const dt=new Date(d.nextDividend.paymentDate||d.nextDividend.exDate);if(!isNaN(dt)&&dt>new Date())return dt;}
+  const now=new Date();const ms=payMonths(t);
+  for(let i=0;i<13;i++){let m=now.getMonth()+i,y=now.getFullYear();while(m>11){m-=12;y++;}if(ms.includes(m))return new Date(y,m,15);}
+  return null;
+}
+
+function annualETF(t){const{amt}=lastDiv(t);return S.shares[t]*amt*(ETFS.find(e=>e.ticker===t).freq==='monthly'?12:4);}
+function totalAnnual(){return ETFS.reduce((s,e)=>s+annualETF(e.ticker),0)+zj();}
+
+function warnBox(){
+  if(!S.anyFail||!S.failed.length)return'';
+  const all=S.failed.length===ETFS.length;
+  return`<div class="warn-box"><div class="warn-box-title"><i class="ti ti-alert-circle"></i>${all?'DivvyDiary nicht erreichbar':'Teilweise Schätzwerte aktiv'}</div><div class="warn-box-body">${all?'Alle ETF-Beträge basieren auf <strong>Schätzwerten</strong>. Bitte aktualisiere sobald du online bist.':'<strong>'+S.failed.join(', ')+'</strong> verwenden Schätzwerte.'}</div></div>`;
+}
+
+function openDetail(t){
+  const etf=ETFS.find(e=>e.ticker===t);
+  const d=S.api[t];
+  const{amt,date,live}=lastDiv(t);
+  const sh=S.shares[t];
+  const ann=annualETF(t);
+  const nd=nextDate(t);
+  const cur=d&&d.currency?d.currency:'USD';
+  const kpis=[
+    {l:'Letzter Betrag / Anteil',v:`${fmt(amt)} ${cur}`,big:true},
+    {l:'Deine Ausschüttung',v:`${fmt(sh*amt)} €`,big:true},
+    {l:'Jahresertrag (est.)',v:`${fmtI(ann)} €`},
+    {l:'Deine Anteile',v:sh.toLocaleString('de-DE')},
+    {l:'Rhythmus',v:etf.freq==='monthly'?'monatlich':'quartalsweise'},
+    {l:'Nächste Zahlung',v:nd?nd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'–'}
+  ];
+  let histRows='';
+  if(d&&d.dividends&&d.dividends.length){
+    const sorted=[...d.dividends].sort((a,b)=>new Date(b.paymentDate||b.exDate)-new Date(a.paymentDate||a.exDate));
+    histRows=sorted.map(x=>{
+      const ex=x.exDate?new Date(x.exDate).toLocaleDateString('de-DE'):'–';
+      const pay=x.paymentDate?new Date(x.paymentDate).toLocaleDateString('de-DE'):'–';
+      const a=parseFloat(x.amount)||0;
+      const chg=x.change!=null?`<td class="${x.change>=0?'pos':'neg'}">${fmtP(x.change)}</td>`:'<td>–</td>';
+      return`<tr><td>${ex}</td><td>${pay}</td><td style="text-align:right">${fmt(a)} ${cur}</td>${chg}</tr>`;
+    }).join('');
+  }
+  const countries=d&&d.countries&&d.countries.length?d.countries.slice(0,8).map(c=>([c.name||c.country,parseFloat(c.weight)||0])):[];
+  const maxC=countries.length?Math.max(...countries.map(x=>x[1])):1;
+  const cHtml=countries.map(([n,w])=>`<div class="bar-row"><div class="bar-label">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${(w/maxC*100).toFixed(1)}%;background:${etf.color}"></div></div><div class="bar-pct">${w.toFixed(1)}%</div></div>`).join('');
+  const sectors=d&&d.sectors&&d.sectors.length?d.sectors.slice(0,8).map(s=>([s.name||s.sector,parseFloat(s.weight)||0])):[];
+  const maxS=sectors.length?Math.max(...sectors.map(x=>x[1])):1;
+  const sHtml=sectors.map(([n,w])=>`<div class="bar-row"><div class="bar-label">${n}</div><div class="bar-track"><div class="bar-fill" style="width:${(w/maxS*100).toFixed(1)}%;background:${etf.color}88"></div></div><div class="bar-pct">${w.toFixed(1)}%</div></div>`).join('');
+  const allRows=histRows.split('</tr>').filter(x=>x.trim());
+  const shortRows=allRows.slice(0,5).join('</tr>')+(allRows.length>0?'</tr>':'');
+  const hasMore=allRows.length>5;
+  document.getElementById('modal-wrap').innerHTML=`
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-dot" style="background:${etf.color}"></div>
+        <div class="modal-title">${t}<span class="tag ${live?'tag-live':'tag-est'}">${live?'live':'Schätzwert'}</span></div>
+        <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="dsec"><div class="dsec-title">Kennzahlen</div>
+          <div class="kpi-grid">${kpis.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.l}</div><div class="kpi-value${k.big?' big':''}">${k.v}</div></div>`).join('')}</div>
+          <table class="dtable">
+            <tr><td style="color:var(--text2)">ISIN</td><td>${etf.isin}</td></tr>
+            <tr><td style="color:var(--text2)">Letzter Zahltag</td><td>${date?new Date(date).toLocaleDateString('de-DE'):'–'}</td></tr>
+            <tr><td style="color:var(--text2)">Dividendenwährung</td><td>${cur}</td></tr>
+          </table>
+        </div>
+        ${histRows?`<div class="dsec"><div class="dsec-title">Ausschüttungshistorie</div>
+          <table class="dtable"><thead><tr><th>Ex-Tag</th><th>Zahltag</th><th style="text-align:right">Betrag</th><th style="text-align:right">Änd.</th></tr></thead>
+          <tbody id="hs">${shortRows}</tbody></table>
+          ${hasMore?`<button class="toggle-btn" id="hb" onclick="toggleH()">Alle ${allRows.length} Einträge <i class="ti ti-chevron-down"></i></button>
+          <div id="hf" style="display:none"><table class="dtable"><thead><tr><th>Ex-Tag</th><th>Zahltag</th><th style="text-align:right">Betrag</th><th style="text-align:right">Änd.</th></tr></thead><tbody>${histRows}</tbody></table></div>`:''}</div>`:''}
+        ${cHtml?`<div class="dsec"><div class="dsec-title">Länderverteilung (Top 8)</div>${cHtml}</div>`:''}
+        ${sHtml?`<div class="dsec"><div class="dsec-title">Sektorverteilung (Top 8)</div>${sHtml}</div>`:''}
+        <a class="dd-link" href="https://divvydiary.com/de/symbols/${etf.isin}" target="_blank"><i class="ti ti-external-link"></i> Vollständige Daten auf DivvyDiary</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openZinsDetail(){
+  const now=new Date();const nd=new Date(now.getFullYear(),now.getMonth()+1,1);
+  document.getElementById('modal-wrap').innerHTML=`
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-dot" style="background:${ZINS_COLOR}"></div>
+        <div class="modal-title">Zinserträge<span class="tag tag-zins">monatlich</span></div>
+        <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="dsec"><div class="dsec-title">Kennzahlen</div>
+          <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label">Monatlicher Zinsertrag</div><div class="kpi-value big">${fmt(zm())} €</div></div>
+            <div class="kpi-card"><div class="kpi-label">Jahresertrag</div><div class="kpi-value big">${fmtI(zj())} €</div></div>
+            <div class="kpi-card"><div class="kpi-label">Kapital</div><div class="kpi-value">${fmtI(S.zins.kapital)} €</div></div>
+            <div class="kpi-card"><div class="kpi-label">Zinssatz p.a.</div><div class="kpi-value">${S.zins.satz.toLocaleString('de-DE')} %</div></div>
+            <div class="kpi-card"><div class="kpi-label">Rhythmus</div><div class="kpi-value" style="font-size:14px">monatlich</div></div>
+            <div class="kpi-card"><div class="kpi-label">Nächste Zahlung</div><div class="kpi-value" style="font-size:13px">${nd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</div></div>
+          </div>
+          <table class="dtable">
+            <tr><td style="color:var(--text2)">Formel</td><td>Kapital × Zinssatz ÷ 12</td></tr>
+            <tr><td style="color:var(--text2)">Zahltag</td><td>1. jeden Monats</td></tr>
+            <tr><td style="color:var(--text2)">${fmtI(S.zins.kapital)} € × ${S.zins.satz}%</td><td>= ${fmtI(zj())} € / Jahr</td></tr>
+            <tr><td style="color:var(--text2)">Pro Monat</td><td>${fmt(zm())} €</td></tr>
+          </table>
+        </div>
+        <div style="font-size:12px;color:var(--text2);text-align:center;margin-top:16px">Kapital und Zinssatz anpassbar unter "Anteile"</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleH(){
+  const full=document.getElementById('hf');const s=document.getElementById('hs')?.closest('table');const btn=document.getElementById('hb');
+  const open=full.style.display==='none';full.style.display=open?'block':'none';if(s)s.style.display=open?'none':'';
+  btn.innerHTML=open?'Weniger anzeigen <i class="ti ti-chevron-up"></i>':'Alle Einträge <i class="ti ti-chevron-down"></i>';
+}
+function closeModal(){document.getElementById('modal-wrap').innerHTML='';}
+
+function renderAll(){
+  renderDash();
+  if(document.getElementById('tab-prognose').classList.contains('active'))renderProg();
+  if(document.getElementById('tab-einstellungen').classList.contains('active'))renderSettings();
+}
+
+function renderDash(){
+  const tot=totalAnnual();const now=new Date();
+  const nd1=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const upcoming=ETFS.map(etf=>{
+    const dt=nextDate(etf.ticker);if(!dt)return null;
+    const{amt,live}=lastDiv(etf.ticker);
+    return{t:etf.ticker,c:etf.color,dt,a:S.shares[etf.ticker]*amt,live,lbl:`${dt.getDate()}. ${MONF[dt.getMonth()]} ${dt.getFullYear()}`,isZins:false};
+  }).filter(Boolean);
+  upcoming.push({t:'Zinsen',c:ZINS_COLOR,dt:nd1,a:zm(),live:true,lbl:`1. ${MONF[nd1.getMonth()]} ${nd1.getFullYear()}`,isZins:true});
+  upcoming.sort((a,b)=>a.dt-b.dt);
+  const hm={};
+  S.history.forEach(h=>{const k=h.year*100+h.month;if(!hm[k])hm[k]={};hm[k][h.ticker]=(hm[k][h.ticker]||0)+h.amount;});
+  const l6=[];
+  for(let i=5;i>=0;i--){let m=now.getMonth()-i,y=now.getFullYear();if(m<0){m+=12;y--;}l6.push({lbl:MON[m],k:y*100+m,d:hm[y*100+m]||{}});}
+  document.getElementById('tab-dashboard').innerHTML=`
+    <div id="ast" class="status-bar status-loading"><i class="ti ti-refresh"></i><span class="status-text">Verbinde...</span><button class="refresh-btn" onclick="refresh()"><i class="ti ti-refresh"></i> Neu laden</button></div>
+    ${warnBox()}
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Jahresertrag gesamt</div><div class="metric-value">${fmtI(tot)} €</div><div class="metric-sub">ETFs + Zinsen</div></div>
+      <div class="metric"><div class="metric-label">Monatlich (est.)</div><div class="metric-value">${fmtI(tot/12)} €</div><div class="metric-sub">Durchschnitt</div></div>
+    </div>
+    <div class="section-title">Nächste Zahlungen – tippen für Details</div>
+    ${upcoming.slice(0,8).map(p=>`
+      <div class="row" onclick="${p.isZins?'openZinsDetail()':'openDetail(\''+p.t+'\')'}">
+        <div class="dot" style="background:${p.c}"></div>
+        <div class="row-name">
+          <div class="row-ticker">${p.t}${p.isZins?`<span class="tag tag-zins">Zinsen</span>`:`<span class="tag ${p.live?'tag-live':'tag-est'}">${p.live?'live':'est.'}</span>`}</div>
+          <div class="row-detail">${p.lbl}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="row-amt">+${fmt(p.a)} €</div>
+          <i class="ti ti-chevron-right chevron"></i>
+        </div>
+      </div>`).join('')}
+    <div class="section-title">Erhaltene Zahlungen – letzte 6 Monate</div>
+    <div class="legend">${ETFS.map(e=>`<div class="legend-item"><div class="legend-dot" style="background:${e.color}"></div>${e.ticker}</div>`).join('')}<div class="legend-item"><div class="legend-dot" style="background:${ZINS_COLOR}"></div>Zinsen</div></div>
+    <div class="chart-wrap"><canvas id="dc"></canvas></div>`;
+  if(S.fetched){
+    const age=Math.round((Date.now()-S.fetched)/60000);
+    if(!S.anyFail)setStatus('ok','Aktualisiert vor '+(age<2?'wenigen Minuten':age+' Min.'));
+    else if(S.failed.length<ETFS.length)setStatus('warn','Teilweise Schätzwerte – '+S.failed.join(', '));
+    else setStatus('err','DivvyDiary nicht erreichbar – Schätzwerte aktiv');
+  }
+  const allT=[...ETFS.map(e=>e.ticker),'Zinsen'];
+  const allC=[...ETFS.map(e=>e.color),ZINS_COLOR];
+  if(window._dc)window._dc.destroy();
+  window._dc=new Chart(document.getElementById('dc'),{type:'bar',data:{labels:l6.map(x=>x.lbl),datasets:allT.map((t,i)=>({label:t,data:l6.map(x=>Math.round(((x.d[t]||0))*100)/100),backgroundColor:allC[i],borderRadius:3}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:11}},grid:{display:false}},y:{stacked:true,ticks:{color:'#888',font:{size:11},callback:v=>v+'€'},grid:{color:'rgba(128,128,128,0.1)'}}}}});
+}
+
+function renderProg(){
+  const now=new Date();const m12=[];
+  for(let i=0;i<12;i++){
+    let m=now.getMonth()+i,y=now.getFullYear();while(m>11){m-=12;y++;}
+    let tot=0;const bd={};
+    ETFS.forEach(e=>{if(payMonths(e.ticker).includes(m)){const{amt,live}=lastDiv(e.ticker);const a=S.shares[e.ticker]*amt;bd[e.ticker]={a,c:e.color,live};tot+=a;}});
+    bd['Zinsen']={a:zm(),c:ZINS_COLOR,live:true,isZins:true};tot+=zm();
+    m12.push({lbl:MON[m],m,y,tot,bd});
+  }
+  document.getElementById('tab-prognose').innerHTML=`
+    ${warnBox()}
+    <div class="section-title">Prognose – nächste 12 Monate</div>
+    <div class="legend">${ETFS.map(e=>`<div class="legend-item"><div class="legend-dot" style="background:${e.color}"></div>${e.ticker}</div>`).join('')}<div class="legend-item"><div class="legend-dot" style="background:${ZINS_COLOR}"></div>Zinsen</div></div>
+    <div class="chart-wrap" style="height:250px"><canvas id="pc"></canvas></div>
+    <div class="section-title">Monatsdetails</div>
+    ${m12.map(m=>`<div class="prog-month">
+      <div class="prog-lbl"><div class="prog-mon">${m.lbl}</div><div class="prog-yr">${m.y}</div></div>
+      <div class="prog-detail">${Object.keys(m.bd).map(t=>`<div class="divline"><span style="color:${m.bd[t].c}">${t}${m.bd[t].isZins?`<span class="tag tag-zins">Zinsen</span>`:`<span class="tag ${m.bd[t].live?'tag-live':'tag-est'}">${m.bd[t].live?'live':'est.'}</span>`}</span><span>+${fmt(m.bd[t].a)} €</span></div>`).join('')}</div>
+      <div class="prog-total">${fmt(m.tot)} €</div>
+    </div>`).join('')}`;
+  const allT=[...ETFS.map(e=>e.ticker),'Zinsen'];
+  const allC=[...ETFS.map(e=>e.color),ZINS_COLOR];
+  if(window._pc)window._pc.destroy();
+  window._pc=new Chart(document.getElementById('pc'),{type:'bar',data:{labels:m12.map(x=>x.lbl),datasets:allT.map((t,i)=>({label:t,data:m12.map(mm=>Math.round(((mm.bd[t]?.a)||0)*100)/100),backgroundColor:allC[i],borderRadius:3}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:10},autoSkip:false,maxRotation:0},grid:{display:false}},y:{stacked:true,ticks:{color:'#888',font:{size:11},callback:v=>v+'€'},grid:{color:'rgba(128,128,128,0.1)'}}}}});
+}
+
+function renderHistorik(){
+  const now=new Date();const opts=[...ETFS.map(e=>e.ticker),'Zinsen'];
+  document.getElementById('tab-historik').innerHTML=`
+    <div class="section-title">Zahlung eintragen</div>
+    <div class="form-row">
+      <select id="ht">${opts.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
+      <input type="number" id="ha" placeholder="Betrag €" step="0.01" min="0">
+    </div>
+    <div class="form-row">
+      <select id="hm">${MONF.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}</select>
+      <input type="number" id="hy" value="${now.getFullYear()}" min="2024" max="2035">
+    </div>
+    <button class="btn btn-primary" onclick="addH()"><i class="ti ti-plus"></i> Eintragen</button>
+    <div class="section-title" style="margin-top:24px">Eingetragene Zahlungen</div>
+    ${S.history.length===0?'<div class="empty-state"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>Noch keine Einträge</div>':
+      [...S.history].reverse().map((h,ri)=>{const i=S.history.length-1-ri;const etf=ETFS.find(x=>x.ticker===h.ticker);const c=etf?etf.color:ZINS_COLOR;
+        return`<div class="history-item"><div class="history-date">${MON[h.month]} ${h.year}</div><div style="display:flex;align-items:center;gap:6px;flex:1"><div class="dot" style="background:${c}"></div><span style="font-size:14px">${h.ticker}</span></div><div class="history-amt">+${fmt(h.amount)} €</div><button class="btn-icon" onclick="delH(${i})"><i class="ti ti-trash"></i></button></div>`;
+      }).join('')}`;
+}
+
+function renderSettings(){
+  document.getElementById('tab-einstellungen').innerHTML=`
+    <div class="section-title">ETF-Anteile anpassen</div>
+    ${ETFS.map(e=>`<div class="shares-row"><div class="shares-ticker">${e.ticker}</div><div class="shares-freq">${e.freq==='monthly'?'monatlich':'quartalsweise'}</div><input class="shares-input" type="number" id="sh-${e.ticker}" value="${S.shares[e.ticker]}" min="0"></div>`).join('')}
+    <button class="btn btn-primary" style="margin-top:14px" onclick="saveShares()">Speichern</button>
+    <div class="save-msg" id="smsg"><i class="ti ti-check"></i> Gespeichert</div>
+    <div class="section-title" style="margin-top:28px">Zinsen anpassen</div>
+    <div class="zins-box">
+      <div class="zins-box-title"><i class="ti ti-building-bank"></i>Zinseinstellungen</div>
+      <div class="zins-field"><div class="zins-field-label">Kapital (€)</div><input type="number" id="zk" value="${S.zins.kapital}" min="0" step="100"></div>
+      <div class="zins-field"><div class="zins-field-label">Zinssatz p.a. (%)</div><input type="number" id="zs" value="${S.zins.satz}" min="0" step="0.1"></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:8px">Monatlich: <strong>${fmt(zm())} €</strong> &nbsp;|&nbsp; Jährlich: <strong>${fmtI(zj())} €</strong></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveZins()">Zinsen speichern</button>
+    <div class="save-msg" id="zmsg"><i class="ti ti-check"></i> Gespeichert</div>
+    <div class="section-title" style="margin-top:28px">Dividende pro Anteil (DivvyDiary)</div>
+    ${ETFS.map(e=>{const{amt,date,live}=lastDiv(e.ticker);return`<div class="shares-row"><div class="shares-ticker">${e.ticker}</div><div class="shares-freq">${live?(date?new Date(date).toLocaleDateString('de-DE'):'live'):'Schätzwert'}</div><div style="display:flex;align-items:center;gap:6px;width:100px;flex-shrink:0;justify-content:flex-end"><span class="tag ${live?'tag-live':'tag-est'}">${live?'live':'est.'}</span><span style="font-size:13px;font-weight:500">${fmt(amt)} €</span></div></div>`;}).join('')}
+    <button class="btn btn-outline" onclick="refresh()"><i class="ti ti-refresh"></i> DivvyDiary neu laden</button>`;
+}
+
+function addH(){
+  const t=document.getElementById('ht').value,a=parseFloat(document.getElementById('ha').value),m=parseInt(document.getElementById('hm').value),y=parseInt(document.getElementById('hy').value);
+  if(!a||a<=0){alert('Bitte gültigen Betrag eingeben');return;}
+  S.history.push({ticker:t,amount:a,month:m,year:y});save();renderHistorik();renderDash();
+}
+function delH(i){S.history.splice(i,1);save();renderHistorik();renderDash();}
+function saveShares(){
+  ETFS.forEach(e=>{const v=parseFloat(document.getElementById('sh-'+e.ticker).value);if(!isNaN(v)&&v>=0)S.shares[e.ticker]=v;});
+  save();const msg=document.getElementById('smsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2000);
+  renderDash();if(document.getElementById('tab-prognose').classList.contains('active'))renderProg();
+}
+function saveZins(){
+  const k=parseFloat(document.getElementById('zk').value),s=parseFloat(document.getElementById('zs').value);
+  if(!isNaN(k)&&k>=0)S.zins.kapital=k;if(!isNaN(s)&&s>=0)S.zins.satz=s;
+  save();const msg=document.getElementById('zmsg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2000);
+  renderSettings();renderDash();if(document.getElementById('tab-prognose').classList.contains('active'))renderProg();
+}
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='dashboard')renderDash();
+  if(tab==='prognose')renderProg();
+  if(tab==='historik')renderHistorik();
+  if(tab==='einstellungen')renderSettings();
+}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+renderDash();
+loadApi();
+</script>
+</body>
+</html>
