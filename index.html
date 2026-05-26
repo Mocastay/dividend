@@ -146,6 +146,7 @@ let S=loadState();
 const fmt=n=>Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtI=n=>Math.round(n).toLocaleString('de-DE');
 const fmtP=n=>(n>=0?'+':'')+Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+const fmtDate=s=>{if(!s)return'–';const d=new Date(s);const dd=String(d.getDate()).padStart(2,'0');const mm=String(d.getMonth()+1).padStart(2,'0');const yy=d.getFullYear();return dd+'.'+mm+'.'+yy;};
 function zm(){return Math.round(S.zins.kapital*S.zins.satz/100/12*100)/100;}
 function zj(){return Math.round(zm()*12*100)/100;}
 
@@ -181,8 +182,8 @@ function setStatus(t,msg){
 function lastDiv(t){
   const d=S.api[t];
   if(d&&d.dividends&&d.dividends.length){
-    const s=[...d.dividends].sort((a,b)=>new Date(b.paymentDate||b.exDate)-new Date(a.paymentDate||a.exDate));
-    return{amt:parseFloat(s[0].amount)||0,date:s[0].paymentDate||s[0].exDate||null,live:true};
+    const s=[...d.dividends].sort((a,b)=>new Date(b.payDate||b.exDate)-new Date(a.payDate||a.exDate));
+    return{amt:parseFloat(s[0].amount)||0,date:s[0].payDate||s[0].exDate||null,live:true};
   }
   return{amt:FB[t]||0,date:null,live:false};
 }
@@ -191,7 +192,7 @@ function payMonths(t){
   const d=S.api[t];
   if(d&&d.dividends&&d.dividends.length){
     const ms=new Set();
-    d.dividends.forEach(x=>{const dt=new Date(x.paymentDate||x.exDate);if(!isNaN(dt))ms.add(dt.getMonth());});
+    d.dividends.forEach(x=>{const dt=new Date(x.payDate||x.exDate);if(!isNaN(dt))ms.add(dt.getMonth());});
     if(ms.size>=2)return Array.from(ms).sort((a,b)=>a-b);
   }
   return ETFS.find(e=>e.ticker===t).freq==='monthly'?[0,1,2,3,4,5,6,7,8,9,10,11]:[2,5,8,11];
@@ -199,7 +200,7 @@ function payMonths(t){
 
 function nextDate(t){
   const d=S.api[t];
-  if(d&&d.nextDividend){const dt=new Date(d.nextDividend.paymentDate||d.nextDividend.exDate);if(!isNaN(dt)&&dt>new Date())return dt;}
+  if(d&&d.nextDividend){const dt=new Date(d.nextDividend.payDate||d.nextDividend.exDate);if(!isNaN(dt)&&dt>new Date())return dt;}
   const now=new Date();const ms=payMonths(t);
   for(let i=0;i<13;i++){let m=now.getMonth()+i,y=now.getFullYear();while(m>11){m-=12;y++;}if(ms.includes(m))return new Date(y,m,15);}
   return null;
@@ -228,14 +229,14 @@ function openDetail(t){
     {l:'Jahresertrag (est.)',v:`${fmtI(ann)} €`},
     {l:'Deine Anteile',v:sh.toLocaleString('de-DE')},
     {l:'Rhythmus',v:etf.freq==='monthly'?'monatlich':'quartalsweise'},
-    {l:'Nächste Zahlung',v:nd?nd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'–'}
+    {l:'Nächste Zahlung',v:nd?fmtDate(nd.toISOString()):'–'}
   ];
   let histRows='';
   if(d&&d.dividends&&d.dividends.length){
-    const sorted=[...d.dividends].sort((a,b)=>new Date(b.paymentDate||b.exDate)-new Date(a.paymentDate||a.exDate));
+    const sorted=[...d.dividends].sort((a,b)=>new Date(b.payDate||b.exDate)-new Date(a.payDate||a.exDate));
     histRows=sorted.map(x=>{
-      const ex=x.exDate?new Date(x.exDate).toLocaleDateString('de-DE'):'–';
-      const pay=x.paymentDate?new Date(x.paymentDate).toLocaleDateString('de-DE'):'–';
+      const ex=x.exDate?fmtDate(x.exDate):'–';
+      const pay=x.payDate?fmtDate(x.payDate):'–';
       const a=parseFloat(x.amount)||0;
       const chg=x.change!=null?`<td class="${x.change>=0?'pos':'neg'}">${fmtP(x.change)}</td>`:'<td>–</td>';
       return`<tr><td>${ex}</td><td>${pay}</td><td style="text-align:right">${fmt(a)} ${cur}</td>${chg}</tr>`;
@@ -263,7 +264,7 @@ function openDetail(t){
           <div class="kpi-grid">${kpis.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.l}</div><div class="kpi-value${k.big?' big':''}">${k.v}</div></div>`).join('')}</div>
           <table class="dtable">
             <tr><td style="color:var(--text2)">ISIN</td><td>${etf.isin}</td></tr>
-            <tr><td style="color:var(--text2)">Letzter Zahltag</td><td>${date?new Date(date).toLocaleDateString('de-DE'):'–'}</td></tr>
+            <tr><td style="color:var(--text2)">Letzter Zahltag</td><td>${date?fmtDate(date):'–'}</td></tr>
             <tr><td style="color:var(--text2)">Dividendenwährung</td><td>${cur}</td></tr>
           </table>
         </div>
@@ -298,7 +299,7 @@ function openZinsDetail(){
             <div class="kpi-card"><div class="kpi-label">Kapital</div><div class="kpi-value">${fmtI(S.zins.kapital)} €</div></div>
             <div class="kpi-card"><div class="kpi-label">Zinssatz p.a.</div><div class="kpi-value">${S.zins.satz.toLocaleString('de-DE')} %</div></div>
             <div class="kpi-card"><div class="kpi-label">Rhythmus</div><div class="kpi-value" style="font-size:14px">monatlich</div></div>
-            <div class="kpi-card"><div class="kpi-label">Nächste Zahlung</div><div class="kpi-value" style="font-size:13px">${nd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Nächste Zahlung</div><div class="kpi-value" style="font-size:13px">${fmtDate(nd.toISOString())}</div></div>
           </div>
           <table class="dtable">
             <tr><td style="color:var(--text2)">Formel</td><td>Kapital × Zinssatz ÷ 12</td></tr>
@@ -332,7 +333,7 @@ function renderDash(){
   const upcoming=ETFS.map(etf=>{
     const dt=nextDate(etf.ticker);if(!dt)return null;
     const{amt,live}=lastDiv(etf.ticker);
-    return{t:etf.ticker,c:etf.color,dt,a:S.shares[etf.ticker]*amt,live,lbl:`${dt.getDate()}. ${MONF[dt.getMonth()]} ${dt.getFullYear()}`,isZins:false};
+    return{t:etf.ticker,c:etf.color,dt,a:S.shares[etf.ticker]*amt,live,lbl:`${String(dt.getDate()).padStart(2,"0")}. ${MONF[dt.getMonth()]} ${dt.getFullYear()}`,isZins:false};
   }).filter(Boolean);
   upcoming.push({t:'Zinsen',c:ZINS_COLOR,dt:nd1,a:zm(),live:true,lbl:`1. ${MONF[nd1.getMonth()]} ${nd1.getFullYear()}`,isZins:true});
   upcoming.sort((a,b)=>a.dt-b.dt);
@@ -437,7 +438,7 @@ function renderSettings(){
     <button class="btn btn-primary" onclick="saveZins()">Zinsen speichern</button>
     <div class="save-msg" id="zmsg"><i class="ti ti-check"></i> Gespeichert</div>
     <div class="section-title" style="margin-top:28px">Dividende pro Anteil (DivvyDiary)</div>
-    ${ETFS.map(e=>{const{amt,date,live}=lastDiv(e.ticker);return`<div class="shares-row"><div class="shares-ticker">${e.ticker}</div><div class="shares-freq">${live?(date?new Date(date).toLocaleDateString('de-DE'):'live'):'Schätzwert'}</div><div style="display:flex;align-items:center;gap:6px;width:100px;flex-shrink:0;justify-content:flex-end"><span class="tag ${live?'tag-live':'tag-est'}">${live?'live':'est.'}</span><span style="font-size:13px;font-weight:500">${fmt(amt)} €</span></div></div>`;}).join('')}
+    ${ETFS.map(e=>{const{amt,date,live}=lastDiv(e.ticker);return`<div class="shares-row"><div class="shares-ticker">${e.ticker}</div><div class="shares-freq">${live?(date?fmtDate(date):'live'):'Schätzwert'}</div><div style="display:flex;align-items:center;gap:6px;width:100px;flex-shrink:0;justify-content:flex-end"><span class="tag ${live?'tag-live':'tag-est'}">${live?'live':'est.'}</span><span style="font-size:13px;font-weight:500">${fmt(amt)} €</span></div></div>`;}).join('')}
     <button class="btn btn-outline" onclick="refresh()"><i class="ti ti-refresh"></i> DivvyDiary neu laden</button>`;
 }
 
